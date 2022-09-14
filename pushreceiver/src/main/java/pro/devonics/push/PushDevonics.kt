@@ -33,7 +33,7 @@ class PushDevonics(activity: Activity, appId: String)
     private val service = ApiHelper(RetrofitBuilder.apiService)
     private val helperCache = HelperCache(activity)
     private val myContext = activity
-    private var sentPushId: String? = null
+    //private var sentPushId: String? = null
 
     /*private val requestPermissionLauncher = registry
         .register(REGISTRY_KEY, ActivityResultContracts.RequestPermission()) { isGranted ->
@@ -46,7 +46,8 @@ class PushDevonics(activity: Activity, appId: String)
 
     init {
         AppContextKeeper.setContext(activity)
-        PushInitialization.run(appId)
+        PushInit.run(appId, service)
+        //PushInitialization.run(appId)
         startTime()
         startSession()
         createInternalId()

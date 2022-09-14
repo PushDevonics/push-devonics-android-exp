@@ -1,4 +1,4 @@
-[![Release](https://jitpack.io/v/PushDevonics/push-devonics-android.svg)](https://jitpack.io/#PushDevonics/push-devonics-android)
+[![Release](https://jitpack.io/v/PushDevonics/push-devonics-android-exp.svg)](https://jitpack.io/#PushDevonics/push-devonics-android-exp)
 
 Add it to you settings.gradle in repositories:
 
