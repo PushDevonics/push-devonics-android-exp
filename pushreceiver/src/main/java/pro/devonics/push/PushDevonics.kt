@@ -4,14 +4,12 @@ import android.Manifest
 import android.app.Activity
 import android.app.Application
 import android.content.ActivityNotFoundException
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
-import androidx.activity.result.ActivityResultRegistry
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.*
@@ -24,7 +22,6 @@ import java.util.*
 
 
 private const val TAG = "PushDevonics"
-private const val REGISTRY_KEY = "Notification Permission"
 private const val PERMISSIONS_REQUEST_CODE = 2
 
 class PushDevonics(activity: Activity, appId: String)
@@ -33,25 +30,14 @@ class PushDevonics(activity: Activity, appId: String)
     private val service = ApiHelper(RetrofitBuilder.apiService)
     private val helperCache = HelperCache(activity)
     private val myContext = activity
-    //private var sentPushId: String? = null
-
-    /*private val requestPermissionLauncher = registry
-        .register(REGISTRY_KEY, ActivityResultContracts.RequestPermission()) { isGranted ->
-            if (isGranted) {
-                Log.d(TAG, "requestPermissionLauncher: isGranted")
-            } else {
-                Log.d(TAG, "requestPermissionLauncher: notGranted")
-            }
-        }*/
+    private var sentPushId: String? = null
 
     init {
         AppContextKeeper.setContext(activity)
         PushInit.run(appId, service)
-        //PushInitialization.run(appId)
         startTime()
-        startSession()
+        startSession(appId)
         createInternalId()
-        //openUrl(activity)
     }
 
     override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
@@ -61,11 +47,11 @@ class PushDevonics(activity: Activity, appId: String)
             Lifecycle.Event.ON_START -> Log.d(TAG, "ON_START: ")
             Lifecycle.Event.ON_RESUME -> {
                 sendTransition(service)
-                openUrl(myContext)
+                openUrl()
             }
-            Lifecycle.Event.ON_PAUSE -> openUrl(myContext)
+            Lifecycle.Event.ON_PAUSE -> Log.d(TAG, "ON_PAUSE: ")//openUrl(myContext)
             Lifecycle.Event.ON_STOP -> stopSession()//Log.d(TAG, "onStop: ")
-            Lifecycle.Event.ON_DESTROY -> Log.d(TAG, "onDestroy: ")
+            Lifecycle.Event.ON_DESTROY -> Log.d(TAG, "ON_DESTROY: ")
             else -> {}
         }
     }
@@ -88,28 +74,25 @@ class PushDevonics(activity: Activity, appId: String)
                     arrayOf(Manifest.permission.POST_NOTIFICATIONS),
                     PERMISSIONS_REQUEST_CODE
                 )
-                //requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
-
         }
     }
 
     private fun sendTransition(service: ApiHelper) {
-        val sentPushId = helperCache.getSentPushId()
+        sentPushId = helperCache.getSentPushId()
         val pushCache = PushCache()
         val registrationId = pushCache.getRegistrationIdFromPref()
-        if (sentPushId != "" || sentPushId != null) {
+        val transition = helperCache.getTransitionSt()
+        if (transition == false && sentPushId != null) {
             val pushData = sentPushId?.let { PushData(it) }
-            if (pushData != null) {
-                if (registrationId != null) {
-                    service.createTransition(registrationId, pushData)
-                }
+            if (pushData != null && registrationId != null) {
+                service.createTransition(registrationId, pushData)
             }
         }
         helperCache.saveSentPushId(null)
     }
 
-    private fun openUrl(context: Context) {
+    private fun openUrl() {
         val openUrl = helperCache.getOpenUrl()
 
         if (openUrl != null) {
@@ -120,7 +103,7 @@ class PushDevonics(activity: Activity, appId: String)
 
             urlIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             try {
-                context.startActivity(urlIntent)
+                myContext.startActivity(urlIntent)
             } catch (e: ActivityNotFoundException) {
                 Log.e(TAG, "ActivityNotFoundException $e")
             }
@@ -150,12 +133,12 @@ class PushDevonics(activity: Activity, appId: String)
         return pushCache.getInternalIdFromPref()
     }
 
-    private fun startSession() {
+    private fun startSession(appId: String) {
         Log.d(TAG, "startSession: ")
         val pushCache = PushCache()
         val registrationId = pushCache.getRegistrationIdFromPref()
         if (pushCache.getSubscribeStatusFromPref() == true) {
-            val session = registrationId?.let { service.createSession(it) }
+            val session = registrationId?.let { service.createSession(it, appId) }
             //Log.d(TAG, "subscribeStatus = ${pushCache.getSubscribeStatusFromPref()}")
 
         }
@@ -189,9 +172,6 @@ class PushDevonics(activity: Activity, appId: String)
 
     override fun onActivityCreated(p0: Activity, p1: Bundle?) {
         Log.d(TAG, "onActivityCreated()")
-        startTime()
-        startSession()
-        createInternalId()
         askNotificationPermission()
     }
 
@@ -201,7 +181,7 @@ class PushDevonics(activity: Activity, appId: String)
 
     override fun onActivityResumed(p0: Activity) {
         sendTransition(service)
-        openUrl(p0)
+        openUrl()
         Log.d(TAG, "onActivityResumed()")
     }
 

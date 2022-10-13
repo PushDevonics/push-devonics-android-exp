@@ -34,17 +34,18 @@ class PushInit {
                     initFirebaseApp(sender)
                     try {
                         val registrationId = getToken()
-                        val regId = pushCache.getRegistrationIdFromPref()
+                        //val regId = pushCache.getRegistrationIdFromPref()
                         val internalId = pushCache.getInternalIdFromPref()
+                        val status = pushCache.getSubscribeStatusFromPref()
                         if (registrationId != null) {
                             pushCache.saveRegistrationIdPref(registrationId)
-                            if (regId == null) {
+                            if (status == false) {
                                 val pushUser = internalId?.let {
                                     setPushUser(
                                         registrationId, appId, appContext, it
                                     )
                                 }
-                                val subscribe = pushUser?.let { service.createPush(it) }
+                                pushUser?.let { service.createPush(it, appId) }
                             }
                         }
                         Log.d(TAG, "Device registered, push token = $registrationId")
@@ -88,7 +89,7 @@ class PushInit {
             return Tasks.await(tokenTask)
         }
 
-        private fun setPushUser(
+        fun setPushUser(
             registrationId: String,
             appId: String,
             appContext: Context,

@@ -63,6 +63,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         helperCache.saveSentPushId(sentPushId)
         helperCache.saveDeeplink(deeplink)
         helperCache.saveOpenUrl(openUrl)
+        helperCache.saveTransition(false)
         Log.d(TAG, "onMessageReceived sentPushId: $sentPushId")
         Log.d(TAG, "onMessageReceived deeplink: $deeplink")
         Log.d(TAG, "onMessageReceived openUrl: $openUrl")
@@ -74,7 +75,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         //Log.d(TAG, "onMessageReceived packageName: $packageName")
 
         val intent = packageManager.getLaunchIntentForPackage(packageName)
-        intent?.flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+        intent?.flags = Intent.FLAG_ACTIVITY_CLEAR_TASK
         intent?.putExtra("command", "transition")
 
         // Send pushData to intent
@@ -84,8 +85,6 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
         val rnds = (1..1000).random()
 
-        /*val pendingIntent = PendingIntent.getActivity(
-            this, rnds, intent, PendingIntent.FLAG_ONE_SHOT)*/
         val pendingIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             PendingIntent.getActivity(
                 this, rnds, intent, PendingIntent.FLAG_IMMUTABLE)

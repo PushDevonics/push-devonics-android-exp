@@ -1,9 +1,9 @@
 package pro.devonics.push.network
 
-import android.app.Activity
 import android.util.Log
-import pro.devonics.push.HelperCache
+import pro.devonics.push.AppContextKeeper
 import pro.devonics.push.PushCache
+import pro.devonics.push.PushInit
 import pro.devonics.push.model.*
 import retrofit2.Call
 import retrofit2.Callback
@@ -28,7 +28,7 @@ class ApiHelper(private val apiService: ApiService) {
         return null
     }
 
-    fun createPush(pushUser: PushUser): Status? {
+    fun createPush(pushUser: PushUser, appId: String): Status? {
         val call = apiService.createPush(pushUser)
         call.enqueue(
             object : Callback<Status> {
@@ -38,11 +38,12 @@ class ApiHelper(private val apiService: ApiService) {
                     val pushCache = PushCache()
                     if (response.isSuccessful) {
                         pushCache.saveSubscribeStatus(true)
-                        val registrationId = pushCache.getRegistrationIdFromPref()
-                        if (registrationId != null) {
-                            createSession(registrationId)
-                        }
+                        val registrationId = pushUser.getRegistrationId()//pushCache.getRegistrationIdFromPref()
+                        createSession(registrationId, appId)
+
                         Log.d(TAG, "createPush.onResponse: isSuccessful")
+                    } else {
+                        pushCache.saveSubscribeStatus(false)
                     }
                 }
 
@@ -54,7 +55,7 @@ class ApiHelper(private val apiService: ApiService) {
         return null
     }
 
-    fun createSession(registrationId: String): Status? {
+    fun createSession(registrationId: String, appId: String): Status? {
         val call = apiService.createSession(registrationId)
 
         call.enqueue(
@@ -76,7 +77,22 @@ class ApiHelper(private val apiService: ApiService) {
                         }
                         Log.d(TAG, "createSession.onResponse: isSuccessful")
                     } else {
-                        createSession(registrationId)
+                        val subscribe = pushCache.getSubscribeStatusFromPref()
+                        val internalId = pushCache.getInternalIdFromPref()
+                        Log.d(TAG, "createSession: subscribe $subscribe")
+                        Log.d(TAG, "createSession: internalId $internalId")
+
+                        if (subscribe == true && internalId != null) {
+                            val pushUser = PushInit.setPushUser(
+                                registrationId,
+                                appId,
+                                AppContextKeeper.getContext(),
+                                internalId
+                            )
+                            createPush(pushUser, appId)
+
+                            Log.d(TAG, "createSession: pushUser $pushUser")
+                        }
                     }
                     //Log.d(TAG, "createSession.onResponse: response = $response")
                 }
